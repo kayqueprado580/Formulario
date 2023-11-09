@@ -19,11 +19,6 @@ Desafio - C#
 * ASP.NET 6.0 MVC
 * Razor Pages 
 
-## Instalação
-
-```bash
-$ dotnet build
-```
 
 ## Rodando a aplicação
 
