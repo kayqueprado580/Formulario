@@ -1,0 +1,269 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Desafio C# - Formulário";
+
+    var regioesCompleto = Model.Regioes;
+    var siglas = Model.Regioes.Select(r => r.Sigla).Distinct().ToList();
+    var estados = Model.Regioes.Select(r => r.Estado).Distinct().ToList();
+    var regioes = Model.Regioes.Select(r => r.Regiao).Distinct().ToList();
+}
+
+<div class="container">
+    <h2 class="text-center">Formulário</h2>
+
+    <form method="post" class="col-md-8 offset-md-2" onsubmit="enviarFormulario(); return false;">
+        <div class='p-2'>
+            <label asp-for="Nome">Nome:</label>
+            <input asp-for="Nome" maxlength="30" required />
+            <span asp-validation-for="Nome"></span>
+        </div>
+
+        <div class='p-2'>
+            <label asp-for="Sobrenome">Sobrenome:</label>
+            <input asp-for="Sobrenome" maxlength="50" required />
+            <span asp-validation-for="Sobrenome"></span>
+        </div>
+
+        <div class='p-2'>
+            <label asp-for="Email">Email:</label>
+            <input asp-for="Email" maxlength="50" required />
+            <span asp-validation-for="Email"></span>
+        </div>
+
+        <div class='p-2'>
+            <label asp-for="CPF">CPF:</label>
+            <input asp-for="CPF" maxlength="11" required pattern="\d{11}" />
+            <span asp-validation-for="CPF"></span>
+        </div>
+
+        <div class="form-row p-2">
+            <div class="form-group col-md-4">
+                <label asp-for="Sigla">Sigla:</label>
+                <select asp-for="Sigla" class="form-control" onchange="atualizarSigla()">
+                    <option value=0>Selecione uma sigla...</option>
+                    @foreach (var sigla in siglas)
+                    {
+                        <option>@sigla</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row p-2">
+            <div class="form-group col-md-4">
+                <label asp-for="Estado">Estado:</label>
+                <select asp-for="Estado" class="form-control" onchange="atualizarEstado()">
+                    <option value=0>Selecione um estado...</option>
+                    @foreach (var estado in estados)
+                    {
+                        <option>@estado</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row p-2">
+            <div class="form-group col-md-4">
+                <label asp-for="Regiao">Regiao:</label>
+                <select asp-for="Regiao" class="form-control">
+                    <option value=0>Selecione uma regiao...</option>
+                    @foreach (var regiao in regioes)
+                    {
+                        <option>@regiao</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row p-2">
+            <div class="form-group col-md-6">
+                <label asp-for="Cep">CEP:</label>
+                <input asp-for="Cep" maxlength="8" required pattern="\d{8}" onblur="consultarViaCep()" />
+                <span asp-validation-for="Cep"></span>
+            </div>
+        </div>
+
+        <div class="form-row p-2">
+            <div class="form-group col-md-6">
+                <label asp-for="Logradouro" disabled>Logradouro:</label>
+                <input asp-for="Logradouro" disabled />
+            </div>
+        </div>
+
+        <div class="form-row p-2">
+            <div class="form-group col-md-6">
+                <label asp-for="Bairro" disabled>Bairro:</label>
+                <input asp-for="Bairro" disabled />
+            </div>
+        </div>
+
+        <div class="form-row p-2">
+            <div class="form-group col-md-6">
+                <label asp-for="Localidade" disabled>Localidade:</label>
+                <input asp-for="Localidade" disabled />
+            </div>
+        </div>
+
+        <div class="form-row p-2">
+            <div class="form-group col-md-12">
+                <button type="submit" id="btn_send">Enviar</button>
+                <button type="button" onclick="limparFormulario()">Limpar</button>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        var regioesCompleto = @Json.Serialize(regioesCompleto);
+        var siglas = @Json.Serialize(siglas);
+        var estados = @Json.Serialize(estados);
+        var regioes = @Json.Serialize(regioes);
+
+        function consultarViaCep() {
+            var cep = $('#Cep').val();
+            $.get(`https://viacep.com.br/ws/${cep}/json/`, function (data) {
+                $('#Logradouro').val(data.logradouro);
+                $('#Bairro').val(data.bairro);
+                $('#Localidade').val(data.localidade);
+            });
+        }
+
+        function limparFormulario() {
+
+            console.log('estados', estados)
+            $('form')[0].reset();
+            $('#Sigla').val(siglas);
+            $('#Estado').val(estados).prop('disabled', false);
+            $('#Regiao').val(regioes).prop('disabled', false);
+        }
+
+        function atualizarSigla() {
+            var sigla = $('#Sigla').val();
+            if (sigla != 0 && sigla != null && sigla != undefined) {
+
+                var estadoSelect = $('#Estado');
+                var regiaoSelect = $('#Regiao');
+
+                estadoSelect.prop('disabled', true);
+                regiaoSelect.prop('disabled', true);
+                estadoSelect.empty();
+                regiaoSelect.empty();
+
+                var regioesSemDuplicidade = Array.from(new Set(regioesCompleto.map(JSON.stringify))).map(JSON.parse);
+
+                var estadosFiltrados = regioesCompleto
+                    .filter(function (regiao) {
+                        return regiao.sigla === sigla;
+                    })
+                    .map(function (regiao) {
+                        return regiao.estado;
+                    })
+                    .filter(function (estado, index, self) {
+                        return self.indexOf(estado) === index;
+                    });
+                estadosFiltrados.forEach(function (estado) {
+                    estadoSelect.append('<option>' + estado + '</option>');
+                });
+                estadoSelect.val(estadosFiltrados[0]);
+
+                var regioesFiltradas = regioesCompleto
+                    .filter(function (regiao) {
+                        return regiao.sigla === sigla;
+                    })
+                    .map(function (regiao) {
+                        return regiao.regiao;
+                    })
+                    .filter(function (regiao, index, self) {
+                        return self.indexOf(regiao) === index;
+                    });
+                regioesFiltradas.forEach(function (regiao) {
+                    regiaoSelect.append('<option>' + regiao + '</option>');
+                });
+
+                regiaoSelect.prop('disabled', false);
+            }
+        }
+
+        function atualizarEstado() {
+            var estado = $('#Estado').val();
+            if (estado != 0 && estado != null && estado != undefined) {
+
+                var siglaSelect = $('#Sigla');
+                var regiaoSelect = $('#Regiao');
+
+                siglaSelect.prop('disabled', true);
+                regiaoSelect.prop('disabled', true);
+                siglaSelect.empty();
+                regiaoSelect.empty();
+
+                var regioesSemDuplicidade = Array.from(new Set(regioesCompleto.map(JSON.stringify))).map(JSON.parse);
+
+                var siglaFiltrada = regioesCompleto
+                    .filter(function (regiao) {
+                        return regiao.estado === estado;
+                    })
+                    .map(function (regiao) {
+                        return regiao.sigla;
+                    })
+                    .filter(function (sigla, index, self) {
+                        return self.indexOf(sigla) === index;
+                    });
+                siglaFiltrada.forEach(function (sigla) {
+                    siglaSelect.append('<option>' + sigla + '</option>');
+                });
+                siglaSelect.val(siglaFiltrada[0]);
+
+                var regioesFiltradas = regioesCompleto
+                    .filter(function (regiao) {
+                        return regiao.estado === estado;
+                    })
+                    .map(function (regiao) {
+                        return regiao.regiao;
+                    })
+                    .filter(function (regiao, index, self) {
+                        return self.indexOf(regiao) === index;
+                    });
+                regioesFiltradas.forEach(function (regiao) {
+                    regiaoSelect.append('<option>' + regiao + '</option>');
+                });
+
+                regiaoSelect.prop('disabled', false);
+            }
+        }
+
+        function enviarFormulario() {
+
+            var btn_send = $('#btn_send');
+            btn_send.prop('disabled', true);
+
+            var formData = new FormData();
+            formData.append('Nome', $('#Nome').val());
+            formData.append('Sobrenome', $('#Sobrenome').val());
+            formData.append('Email', $('#Email').val());
+            formData.append('CPF', $('#CPF').val());
+            formData.append('Sigla', $('#Sigla').val());
+            formData.append('Estado', $('#Estado').val());
+            formData.append('Regiao', $('#Regiao').val());
+            formData.append('Cep', $('#Cep').val());
+            formData.append('Logradouro', $('#Logradouro').val());
+            formData.append('Bairro', $('#Bairro').val());
+            formData.append('Localidade', $('#Localidade').val());
+
+            console.log("formData:", formData);
+
+            $.ajax({
+                url: '/Formulario/EnviarFormulario',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (result) {
+                    console.log(result);
+                },
+                error: function (error) {
+                    console.error(error);
+                }
+            });
+            btn_send.prop('disabled', false);
+        }
+    </script>
