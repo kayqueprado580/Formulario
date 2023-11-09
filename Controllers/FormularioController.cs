@@ -5,14 +5,13 @@ public class FormularioController : Controller
   [HttpPost]
   public IActionResult EnviarFormulario([FromForm] FormularioModel dadosFormulario)
   {
-    var validator = new FormularioValidador();
-    ValidationResult result = validator.Validate(dadosFormulario);
+    if (!ModelState.IsValid)
+      return BadRequest(ModelState);
 
-    if (!result.IsValid)
-    {
-      return BadRequest(result.Errors);
-    }
+    string mensagemSucesso = "Olá, ";
+    mensagemSucesso += dadosFormulario.Nome;
+    mensagemSucesso += ". Formulário recebido com sucesso!";
 
-    return Ok("Sucesso!");
+    return Ok(mensagemSucesso);
   }
 }

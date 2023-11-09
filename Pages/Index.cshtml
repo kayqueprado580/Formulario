@@ -15,25 +15,25 @@
     <form method="post" class="col-md-8 offset-md-2" onsubmit="enviarFormulario(); return false;">
         <div class='p-2'>
             <label asp-for="Nome">Nome:</label>
-            <input asp-for="Nome" maxlength="30" required />
+            <input asp-for="Nome" maxlength="30" />
             <span asp-validation-for="Nome"></span>
         </div>
 
         <div class='p-2'>
             <label asp-for="Sobrenome">Sobrenome:</label>
-            <input asp-for="Sobrenome" maxlength="50" required />
+            <input asp-for="Sobrenome" maxlength="50" />
             <span asp-validation-for="Sobrenome"></span>
         </div>
 
         <div class='p-2'>
             <label asp-for="Email">Email:</label>
-            <input asp-for="Email" maxlength="50" required />
+            <input asp-for="Email" maxlength="50" />
             <span asp-validation-for="Email"></span>
         </div>
 
         <div class='p-2'>
             <label asp-for="CPF">CPF:</label>
-            <input asp-for="CPF" maxlength="11" required pattern="\d{11}" />
+            <input asp-for="CPF" maxlength="11" pattern="\d{11}" />
             <span asp-validation-for="CPF"></span>
         </div>
 
@@ -119,6 +119,12 @@
         var estados = @Json.Serialize(estados);
         var regioes = @Json.Serialize(regioes);
 
+        var regioesCompletoOriginal = regioesCompleto;
+        var siglasOriginal = siglas;
+        var estadosOriginal = estados;
+        var regioesOriginal = regioes;
+
+
         function consultarViaCep() {
             var cep = $('#Cep').val();
             $.get(`https://viacep.com.br/ws/${cep}/json/`, function (data) {
@@ -129,12 +135,42 @@
         }
 
         function limparFormulario() {
-
-            console.log('estados', estados)
             $('form')[0].reset();
-            $('#Sigla').val(siglas);
-            $('#Estado').val(estados).prop('disabled', false);
-            $('#Regiao').val(regioes).prop('disabled', false);
+            $('#Sigla').prop('disabled', false);
+            $('#Estado').prop('disabled', false);
+            $('#Regiao').prop('disabled', false);
+            $('#Sigla').val(0);
+            $('#Estado').val(0);
+            $('#Regiao').val(0);
+
+            regioesCompleto = JSON.parse(JSON.stringify(regioesCompletoOriginal));
+            regioesCompleto.unshift({ sigla: 'Selecione uma sigla...', estado: 'Selecione um estado...', regiao: 'Selecione uma região...' });
+            siglas = JSON.parse(JSON.stringify(siglasOriginal));
+            siglas.unshift('Selecione uma sigla...');
+            estados = JSON.parse(JSON.stringify(estadosOriginal));
+            estados.unshift('Selecione um estado...');
+            regioes = JSON.parse(JSON.stringify(regioesOriginal));
+            regioes.unshift('Selecione uma região...');
+
+            atualizarElementosHTML()
+        }
+
+        function atualizarElementosHTML() {
+            var siglaSelect = $('#Sigla');
+            siglaSelect.empty();
+            siglas.forEach(function (sigla) {
+                siglaSelect.append('<option>' + sigla + '</option>');
+            });
+            var estadoSelect = $('#Estado');
+            estadoSelect.empty();
+            estados.forEach(function (estado) {
+                estadoSelect.append('<option>' + estado + '</option>');
+            });
+            var regiaoSelect = $('#Regiao');
+            regiaoSelect.empty();
+            regioes.forEach(function (regiao) {
+                regiaoSelect.append('<option>' + regiao + '</option>');
+            });
         }
 
         function atualizarSigla() {
@@ -149,9 +185,7 @@
                 estadoSelect.empty();
                 regiaoSelect.empty();
 
-                var regioesSemDuplicidade = Array.from(new Set(regioesCompleto.map(JSON.stringify))).map(JSON.parse);
-
-                var estadosFiltrados = regioesCompleto
+                var estadosFiltrados = regioesCompletoOriginal
                     .filter(function (regiao) {
                         return regiao.sigla === sigla;
                     })
@@ -166,7 +200,7 @@
                 });
                 estadoSelect.val(estadosFiltrados[0]);
 
-                var regioesFiltradas = regioesCompleto
+                var regioesFiltradas = regioesCompletoOriginal
                     .filter(function (regiao) {
                         return regiao.sigla === sigla;
                     })
@@ -196,9 +230,7 @@
                 siglaSelect.empty();
                 regiaoSelect.empty();
 
-                var regioesSemDuplicidade = Array.from(new Set(regioesCompleto.map(JSON.stringify))).map(JSON.parse);
-
-                var siglaFiltrada = regioesCompleto
+                var siglaFiltrada = regioesCompletoOriginal
                     .filter(function (regiao) {
                         return regiao.estado === estado;
                     })
@@ -213,7 +245,7 @@
                 });
                 siglaSelect.val(siglaFiltrada[0]);
 
-                var regioesFiltradas = regioesCompleto
+                var regioesFiltradas = regioesCompletoOriginal
                     .filter(function (regiao) {
                         return regiao.estado === estado;
                     })
@@ -249,8 +281,6 @@
             formData.append('Bairro', $('#Bairro').val());
             formData.append('Localidade', $('#Localidade').val());
 
-            console.log("formData:", formData);
-
             $.ajax({
                 url: '/Formulario/EnviarFormulario',
                 type: 'POST',
@@ -259,9 +289,24 @@
                 processData: false,
                 success: function (result) {
                     console.log(result);
+                    alert(result)
                 },
                 error: function (error) {
-                    console.error(error);
+                    if (error.responseJSON || error.responseJSON.errors) {
+                        var errorsObject = error.responseJSON;
+
+                        var errorsArray = Object.keys(errorsObject).map(function (key) {
+                            return { field: key, message: errorsObject[key] };
+                        });
+
+                        errorsArray.forEach(function (errorItem) {
+                            console.log(errorItem.field + ': ' + errorItem.message);
+                            alert(errorItem.field + ': ' + errorItem.message);
+                        });
+
+                    } else {
+                        alert('Erro ao processar o formulário. Por favor, tente novamente.');
+                    }
                 }
             });
             btn_send.prop('disabled', false);
